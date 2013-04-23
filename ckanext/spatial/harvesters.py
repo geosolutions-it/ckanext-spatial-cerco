@@ -64,6 +64,65 @@ debug_exception_mode = bool(os.getenv('DEBUG'))
 class SpatialHarvester(object):
     # Q: Why does this not inherit from HarvesterBase in ckanext-harvest?
 
+    config = None
+
+    def _set_config(self,config_str):
+        if config_str:
+            self.config = json.loads(config_str)
+
+            if 'api_version' in self.config:
+                self.api_version = self.config['api_version']
+
+            log.debug('Using config: %r', self.config)
+        else:
+            self.config = {}
+ 
+    def validate_config(self,config):
+        if not config:
+            return config
+
+        try:
+            config_obj = json.loads(config)
+
+            if 'default_tags' in config_obj:
+                if not isinstance(config_obj['default_tags'],list):
+                    raise ValueError('default_tags must be a list')
+
+#            if 'default_groups' in config_obj:
+#                if not isinstance(config_obj['default_groups'],list):
+#                    raise ValueError('default_groups must be a list')
+
+                # Check if default groups exist
+#                context = {'model':model,'user':c.user}
+#                for group_name in config_obj['default_groups']:
+#                    try:
+#                        group = get_action('group_show')(context,{'id':group_name})
+#                    except NotFound,e:
+#                        raise ValueError('Default group not found')
+
+            if 'default_extras' in config_obj:
+                if not isinstance(config_obj['default_extras'],dict):
+                    raise ValueError('default_extras must be a dictionary')
+
+#            if 'user' in config_obj:
+                # Check if user exists
+#                context = {'model':model,'user':c.user}
+#                try:
+#                    user = get_action('user_show')(context,{'id':config_obj.get('user')})
+#                except NotFound,e:
+#                    raise ValueError('User not found')
+
+            for key in ('read_only','force_all'):
+                if key in config_obj:
+                    if not isinstance(config_obj[key],bool):
+                        raise ValueError('%s must be boolean' % key)
+
+        except ValueError,e:
+            raise e
+
+        return config
+
+
     def _is_wms(self,url):
         try:
             capabilities_url = wms.WMSCapabilitiesReader().capabilities_url(url)
@@ -258,7 +317,7 @@ class GeminiHarvester(SpatialHarvester):
             log.info('No package with GEMINI guid %s found, let\'s create one' % gemini_guid)
 
         extras = {
-            'UKLP': 'True',
+#            'UKLP': 'True',
             'harvest_object_id': self.obj.id
         }
 
@@ -326,9 +385,12 @@ class GeminiHarvester(SpatialHarvester):
         package_dict = {
             'title': gemini_values['title'],
             'notes': gemini_values['abstract'],
+            'license_id': self._extract_first_licence_not_url(extras['licence']),
             'tags': tags,
             'resources':[]
         }
+
+#	extras['pippo'] = 'topolino'
 
         if self.obj.source.publisher_id:
             package_dict['groups'] = [{'id':self.obj.source.publisher_id}]
@@ -362,12 +424,34 @@ class GeminiHarvester(SpatialHarvester):
                             resource['verified'] = True
                             resource['verified_date'] = datetime.now().isoformat()
                             resource_format = 'WMS'
+                    # GN customization for CERCO
+                    if  resource_locator.get('protocol','') == 'TOLOMEO:preset':
+                        resource['verified'] = True
+                        resource['verified_date'] = datetime.now().isoformat()
+                        resource_format = 'tolomeo'
+                    # GN specific WMS type
+                    if resource_locator.get('protocol','') == 'OGC:WMS-1.3.0-http-get-map' or resource_locator.get('protocol','') == 'OGC:WMS-1.1.1-http-get-map' :
+                        resource['verified'] = True
+                        resource['verified_date'] = datetime.now().isoformat()
+                        resource_format = 'WMS'
+                    # GN downloadable resource 
+                    if resource_locator.get('protocol','') == 'WWW:DOWNLOAD-1.0-http--download':
+                        resource['verified'] = True # ??
+                        resource['verified_date'] = datetime.now().isoformat() # ??
+                        if resource_locator.get('mimetype','') == 'application/x-compressed':
+                             # this is a ZIP file
+                             resource_format = 'ZIP'
+                        if resource_locator.get('mimetype','') == 'application/gnutar':
+                             # this is a TGZ file
+                             resource_format = 'TGZ'
+                    
                     resource.update(
                         {
                             'url': url,
                             'name': resource_locator.get('name',''),
                             'description': resource_locator.get('description') if resource_locator.get('description') else 'Resource locator',
                             'format': resource_format or None,
+                            'resource_type': 'GeoGraphic',
                             'resource_locator_protocol': resource_locator.get('protocol',''),
                             'resource_locator_function':resource_locator.get('function','')
 
@@ -382,6 +466,43 @@ class GeminiHarvester(SpatialHarvester):
                 view_resources = [r for r in package_dict['resources'] if r['format'] == 'WMS']
                 if len(view_resources):
                     view_resources[0]['ckan_recommended_wms_preview'] = True
+
+        #ETj: process default extras from config (adapted from ckanharvester.py)
+
+        self._set_config(self.obj.source.config)
+        log.info('Config: %s', self.config)
+        if self.config:
+           log.info('Config is here: %s', self.config)
+           for key,value in self.config.iteritems():
+              log.info('Config pair: %s,%s', key,value)
+        else:
+           log.info('Config is not defined')
+
+        default_extras = self.config.get('default_extras',{})
+        if default_extras:
+            log.info('Processing default_extras')
+            override_extras = self.config.get('override_extras',False)
+#            if not 'extras' in package_dict:
+#                package_dict['extras'] = {}
+            for key,value in default_extras.iteritems():
+                log.debug('Processing extra %s', key)
+                if not key in extras or override_extras:
+                    # Look for replacement strings
+#                    if isinstance(value,basestring):
+#                        value = value.format(harvest_source_id=harvest_object.job.source.id,
+#                                     harvest_source_url=harvest_object.job.source.url.strip('/'),
+#                                     harvest_source_title=harvest_object.job.source.title,
+#                                     harvest_job_id=harvest_object.job.id,
+#                                     harvest_object_id=harvest_object.id,
+#                                     dataset_id=package_dict['id'])
+
+                    extras[key] = value
+	# end handling of /default_extras
+
+	# Compose the URL to view the metadata inside GN GUI
+	if extras.get('gn_url'):
+            package_dict['url'] = '%s/srv/ita/metadata.show.minimal?uuid=%s' % (extras.get('gn_url'), extras.get('guid')) 
+            log.info('Setting the Source URL to %s', package_dict['url'])
 
         extras_as_dict = []
         for key,value in extras.iteritems():
@@ -495,6 +616,16 @@ class GeminiHarvester(SpatialHarvester):
             if o.scheme and o.netloc:
                 return licence
         return None
+
+    def _extract_first_licence_not_url(self, licences):
+        '''We need something that is not a URL, hoping it's 
+        a license id. Otherwise returns None.'''
+        ret = None
+        for licence in licences:
+            o = urlparse(licence)
+            if not o.scheme or not o.netloc:
+                ret = licence
+        return ret
 
     def _create_package_from_data(self, package_dict, package = None):
         '''

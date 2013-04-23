@@ -222,6 +222,14 @@ class GeminiResourceLocator(GeminiElement):
             name="name",
             search_paths=[
                 "gmd:name/gco:CharacterString/text()",
+                "gmd:name/gmx:MimeFileType/text()", # etj 20130422
+            ],
+            multiplicity="0..1",
+        ),
+        GeminiElement( # etj 20130422
+            name="mimetype",
+            search_paths=[
+                "gmd:name/gmx:MimeFileType/@type",
             ],
             multiplicity="0..1",
         ),
@@ -318,6 +326,16 @@ class GeminiDocument(MappedXmlDocument):
         GeminiElement(
             name="guid",
             search_paths="gmd:fileIdentifier/gco:CharacterString/text()",
+            multiplicity="0..1",
+        ),
+        GeminiElement( # by ETj
+            name="author",
+            search_paths="gmd:fileIdentifier/gco:CharacterString/text()", # todo
+            multiplicity="0..1",
+        ),
+        GeminiElement( # by ETj
+            name="maintainer",
+            search_paths="gmd:fileIdentifier/gco:CharacterString/text()", # todo
             multiplicity="0..1",
         ),
         GeminiElement(
