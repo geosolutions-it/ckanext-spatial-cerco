@@ -416,6 +416,7 @@ class GeminiHarvester(SpatialHarvester):
                 url = resource_locator.get('url','')
                 if url:
                     resource_format = ''
+                    resource_type = 'Geographic'
                     resource = {}
                     if extras['resource-type'] == 'service':
                         # Check if the service is a view service
@@ -428,12 +429,16 @@ class GeminiHarvester(SpatialHarvester):
                     if  resource_locator.get('protocol','') == 'TOLOMEO:preset':
                         resource['verified'] = True
                         resource['verified_date'] = datetime.now().isoformat()
-                        resource_format = 'tolomeo'
+                    #    resource_format = 'tolomeo'
                     # GN specific WMS type
                     if resource_locator.get('protocol','') == 'OGC:WMS-1.3.0-http-get-map' or resource_locator.get('protocol','') == 'OGC:WMS-1.1.1-http-get-map' :
                         resource['verified'] = True
                         resource['verified_date'] = datetime.now().isoformat()
-                        resource_format = 'WMS'
+                    # GN link to page
+                    if resource_locator.get('protocol','') == 'WWW:LINK-1.0-http--link' :
+                        resource['verified'] = True
+                        resource_type = 'link'
+                    #    resource_format = 'WMS'
                     # GN downloadable resource 
                     if resource_locator.get('protocol','') == 'WWW:DOWNLOAD-1.0-http--download':
                         resource['verified'] = True # ??
@@ -451,7 +456,7 @@ class GeminiHarvester(SpatialHarvester):
                             'name': resource_locator.get('name',''),
                             'description': resource_locator.get('description') if resource_locator.get('description') else 'Resource locator',
                             'format': resource_format or None,
-                            'resource_type': 'GeoGraphic',
+                            'resource_type': resource_type,
                             'resource_locator_protocol': resource_locator.get('protocol',''),
                             'resource_locator_function':resource_locator.get('function','')
 
