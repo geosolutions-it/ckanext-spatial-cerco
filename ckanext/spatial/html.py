@@ -63,7 +63,6 @@ SPATIAL_SEARCH_FORM="""
 <input type="hidden" id="ext_bbox" name="ext_bbox" value="%(bbox)s" />
 <input type="hidden" id="ext_prev_extent" name="ext_prev_extent" value="" />
 
-<div id="spatial-search-show"><a href="#" class="more">Filter by location</a></div>
 <div id="spatial-search-container">
     <div id="spatial-search-map-container">
         <div id="spatial-search-map" class="span3"></div>
