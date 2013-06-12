@@ -416,6 +416,7 @@ class GeminiHarvester(SpatialHarvester):
                 url = resource_locator.get('url','')
                 if url:
                     resource_format = ''
+                    resource_type = ''
                     resource = {}
                     if extras['resource-type'] == 'service':
                         # Check if the service is a view service
