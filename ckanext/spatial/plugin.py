@@ -228,9 +228,9 @@ class DatasetExtentMap(SingletonPlugin):
                 map_type = config.get('ckan.spatial.dataset_extent_map.map_type', 'osm')
                 if map_type == 'osm':
                     js_library_links = '<script type="text/javascript" src="/ckanext/spatial/js/openlayers/OpenLayers_dataset_map.js"></script>'
-                    map_attribution = html.MAP_ATTRIBUTION_OSM
+                    map_attribution = html.MAP_ATTRIBUTION_OSM 
                 elif map_type == 'os':
-                    js_library_links = '<script src="http://osinspiremappingprod.ordnancesurvey.co.uk/libraries/openlayers-openlayers-56e25fc/lib/OpenLayers.js" type="text/javascript"></script>'
+                    js_library_links = '<script type="text/javascript" src="/ckanext/spatial/js/proj4js/proj4js-compressed.js"></script><script src="/ckanext/spatial/js/openlayers/OpenLayers.js" type="text/javascript"></script>'
                     map_attribution = '' # done in the js instead
                 
                 data = {'extent': extent,
