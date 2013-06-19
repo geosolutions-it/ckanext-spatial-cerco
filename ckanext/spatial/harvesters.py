@@ -477,7 +477,8 @@ class GeminiHarvester(SpatialHarvester):
                 if len(view_resources):
                     view_resources[0]['ckan_recommended_wms_preview'] = True
 
-        #ETj: process default extras from config (adapted from ckanharvester.py)
+
+        # ETj: process configuration
 
         self._set_config(self.obj.source.config)
         log.info('Config: %s', self.config)
@@ -487,6 +488,16 @@ class GeminiHarvester(SpatialHarvester):
               log.info('Config pair: %s,%s', key,value)
         else:
            log.info('Config is not defined')
+
+        # ETj: process default tags from config (adapted from ckanharvester.py)
+
+        default_tags = self.config.get('default_tags',[])
+        if default_tags:
+            if not 'tags' in package_dict:
+                package_dict['tags'] = []
+            package_dict['tags'].extend([{'name':t} for t in default_tags ])
+
+        # ETj: process default extras from config (adapted from ckanharvester.py)
 
         default_extras = self.config.get('default_extras',{})
         if default_extras:
@@ -806,7 +817,7 @@ class GeminiCswHarvester(GeminiHarvester, SingletonPlugin):
         try:
             record = self.csw.getrecordbyid([identifier])
         except Exception, e:
-            self._save_object_error('Error getting the CSW record with GUID %s' % identifier, harvest_object)
+            self._save_object_error('Error getting the CSW record with GUID %s [%r]' % (identifier,e), harvest_object)
             return False
 
         if record is None:
