@@ -799,6 +799,52 @@ class GeminiCswHarvester(GeminiHarvester, SingletonPlugin):
             self._save_gather_error('No records received from the CSW server', harvest_job)
             return None
 
+        # ETj: perform removal of objects not found remotely
+
+        if len(ids) > 0: # or there may have encountered a problem
+
+           log.info('Removal stage...')
+           log.info(' Checking existing dataset from source %s : %s' , harvest_job.source.id, harvest_job.source.title )
+
+           # the ids of the existing active metadata harvested from this source
+           old_ho_list = Session.query(HarvestObject) \
+               .join(Package) \
+               .filter(HarvestObject.package!=None) \
+               .filter(Package.state==u'active') \
+               .filter(HarvestObject.harvest_source_id==harvest_job.source.id) \
+               .filter(HarvestObject.current==True) \
+               .all()
+           # dict guid -> id
+           old_ho_dict = {}
+           for obj in old_ho_list:
+               old_ho_dict[getattr(obj,'guid')] = obj
+
+           log.info('Found %s dataset already harvested from %s', len(old_ho_dict), harvest_job.source.id )
+
+           gathered = set(used_identifiers)
+           for old_guid, old_ho in old_ho_dict.iteritems():
+           #for old_guid in old_guids:
+               if old_guid in gathered:
+                   log.debug('guid exists %s ', old_guid)
+               else:
+                   log.info('HarvestedObject no longer exists and will be removed [guid:%s, id:%s] ', old_guid, getattr(old_ho, 'id'))
+                   #log.info(old_ho)
+                   pkg_id = getattr(old_ho, 'package_id')
+                   log.debug('Loading package %s', pkg_id)
+                   try:
+                       delSession = Session()
+                       pkg = delSession.query(Package).filter(Package.id==pkg_id).first()
+
+                       #pkg = Package.get(pkg_id) # .latest_related_revision()
+                       log.info('Removing package "%s"', pkg.name)
+                       context = {'model': model, 'session': delSession, 'user': 'harvest', 'api_version': 2}
+                       get_action('package_delete')(context, {'id':pkg_id})
+
+                       log.info('Package removed')
+                   except Exception,e:
+                       # Error in reoving the dataset, np, we'll go on....                       
+                       log.error('Error while removing stale HarvestedObject %s: %s ', old_guid, e)
+
         return ids
 
     def fetch_stage(self,harvest_object):
