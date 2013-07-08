@@ -262,7 +262,7 @@ class GeminiHarvester(SpatialHarvester):
         self.obj.metadata_modified_date = metadata_modified_date
         self.obj.save()
 
-        last_harvested_object = Session.query(HarvestObject) \
+        last_harvested_object = Session.query(HarvestObject).join(Package) \
                             .filter(HarvestObject.guid==gemini_guid) \
                             .filter(HarvestObject.current==True) \
                             .all()
@@ -392,8 +392,24 @@ class GeminiHarvester(SpatialHarvester):
 
 #	extras['pippo'] = 'topolino'
 
+        package_dict['groups'] = []
+
         if self.obj.source.publisher_id:
-            package_dict['groups'] = [{'id':self.obj.source.publisher_id}]
+            package_dict['groups'].append( {'id':self.obj.source.publisher_id} )
+
+        # if updating an exising pakage, retain all existing groups
+        if package: 
+#            log.info('dataset already harvested: %s', last_harvested_object)
+#            log.debug('######## package is: %s', last_harvested_object.package)
+#            log.info('groups are: %s', last_harvested_object.package.groups)
+            groups = last_harvested_object.package.get_groups()
+            if len(groups) > 0:
+               log.info('Reapplying groups to dataset: %s', groups)
+               for group in groups:
+                  log.info('Adding group id:%s name:%s', group.id, group.name)
+                  package_dict['groups'].append( {'id': group.id} )
+            else:
+               log.debug('No group to reapply for this dataset')
 
 
         if reactivate_package:
