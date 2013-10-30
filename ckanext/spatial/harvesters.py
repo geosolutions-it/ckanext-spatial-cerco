@@ -367,6 +367,7 @@ class GeminiHarvester(SpatialHarvester):
         extras['provider'] = provider
         extras['responsible-party'] = '; '.join(responsible_parties)
 
+
         # Construct a GeoJSON extent so ckanext-spatial can register the extent geometry
         extent_string = self.extent_template.substitute(
                 minx = extras['bbox-east-long'],
@@ -389,6 +390,17 @@ class GeminiHarvester(SpatialHarvester):
             'tags': tags,
             'resources':[]
         }
+
+        # ETj extract author info
+        package_dict['author'] = self._process_authors(
+            gemini_values['responsible-organisation'],'author')
+
+	# AGGIUNTA CERCO
+	package_dict['author_email'] = self._process_authors_email(
+            gemini_values['responsible-organisation'],'author')
+
+	package_dict['version'] = self._process_ultima_modifica(gemini_values['dataset-reference-date'])
+	# FINE AGGIUNTA gemini_values['responsible-organisation']) ['title'] /modifca 
 
 #	extras['pippo'] = 'topolino'
 
@@ -446,13 +458,14 @@ class GeminiHarvester(SpatialHarvester):
                         resource_type = 'TOLOMEO:preset'
                         resource['verified'] = True
                         resource['verified_date'] = datetime.now().isoformat()
-                    #    resource_format = 'tolomeo'
+                    #    resource_format = 'mappa'
                     # GN specific WMS type
                     if resource_locator.get('protocol','') == 'OGC:WMS-1.3.0-http-get-map' or resource_locator.get('protocol','') == 'OGC:WMS-1.1.1-http-get-map' :
                         resource['verified'] = True
                         resource_type = ''
                         resource_type='WMS'
                         resource['verified_date'] = datetime.now().isoformat()
+			resource_format = 'WMS'
                     # GN link to page
                     if resource_locator.get('protocol','') == 'WWW:LINK-1.0-http--link' :
                         resource['verified'] = True
@@ -541,6 +554,7 @@ class GeminiHarvester(SpatialHarvester):
             package_dict['url'] = '%s/srv/ita/metadata.show.minimal?uuid=%s' % (extras.get('gn_url'), extras.get('guid')) 
             log.info('Setting the Source URL to %s', package_dict['url'])
 
+
         extras_as_dict = []
         for key,value in extras.iteritems():
             if isinstance(value,(basestring,Number)):
@@ -627,6 +641,47 @@ class GeminiHarvester(SpatialHarvester):
             provider = u''
 
         return provider, responsible_parties
+
+    @classmethod
+    def _process_authors(cls, responsible_organisations,role):
+        '''Given the list of responsible_organisations and their roles,
+        (extracted from the GeminiDocument) returns info about the authors.
+
+        :param responsible_organisations: list of dicts, each with keys
+                      includeing 'organisation-name' and 'role'
+        :returns: authors as string
+        '''
+
+        for responsible_party in responsible_organisations:
+            if responsible_party['role'] == role:
+                return responsible_party['individual-name'] + " - " +responsible_party['organisation-name']             
+
+        return ""
+
+    @classmethod
+    def _process_authors_email(cls, responsible_organisations,role):
+        '''Given the list of responsible_organisations and their roles,
+        (extracted from the GeminiDocument) returns info about the authors_email
+
+        :param responsible_organisations: list of dicts, each with keys
+                      includeing 'organisation-name' and 'role'
+        :returns: authors email as string
+        '''
+
+        for responsible_party in responsible_organisations:
+            if responsible_party['role'] == role:
+               # return responsible_party['organisation-name'] 
+		return responsible_party['contact-info']['email']           
+
+        return ""
+
+    @classmethod
+    def _process_ultima_modifica(cls, responsible_organisations):
+
+	for data in responsible_organisations:
+         #    if responsible_party['role'] == role:
+                return  data['type'] + " - " + data['value']              
+ #     return ""
 
     def gen_new_name(self, title):
         name = munge_title_to_name(title).replace('_', '-')

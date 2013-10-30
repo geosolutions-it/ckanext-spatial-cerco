@@ -176,6 +176,13 @@ class GeminiResponsibleParty(GeminiElement):
             multiplicity="0..1",
         ),
         GeminiElement(
+            name="individual-name",
+            search_paths=[
+                "gmd:individualName/gco:CharacterString/text()",
+            ],
+            multiplicity="0..1",
+        ),    
+        GeminiElement(
             name="contact-info",
             search_paths=[
                 "gmd:contactInfo/gmd:CI_Contact",

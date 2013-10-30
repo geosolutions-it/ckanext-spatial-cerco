@@ -223,7 +223,7 @@ class DatasetExtentMap(SingletonPlugin):
             extent = c.pkg.extras.get('spatial',None)
             if extent:
                 map_element_id = config.get('ckan.spatial.dataset_extent_map.element_id', 'dataset')
-                title = config.get('ckan.spatial.dataset_extent_map.title', 'Geographic extent')
+                title = config.get('ckan.spatial.dataset_extent_map.title', 'Area coperta')
                 body_html = html.PACKAGE_MAP_EXTENDED if title else html.PACKAGE_MAP_BASIC
                 map_type = config.get('ckan.spatial.dataset_extent_map.map_type', 'osm')
                 if map_type == 'osm':

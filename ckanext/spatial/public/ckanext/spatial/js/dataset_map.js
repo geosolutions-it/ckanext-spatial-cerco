@@ -86,8 +86,8 @@ CKAN.DatasetMap = function($){
                 // Create a new map
                 var layers = [
                   new OpenLayers.Layer.WMS("Geoserver layers - Tiled",
-                    'http://pubblicazioni.provincia.fi.it/geoserver/tutto/service=wms', {
-                        LAYERS: 'SfondoPortaleMobilita',
+                    'http://pubblicazioni.provincia.fi.it/geoserver/sfondi/service=wms', {
+                        LAYERS: 'SfondoCercoLight',
                         STYLES: '',
                         format: 'image/png',
                         tiled: true
